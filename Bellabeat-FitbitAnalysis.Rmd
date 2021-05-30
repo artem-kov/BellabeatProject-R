@@ -1,0 +1,552 @@
+---
+title: "Bellabeat Capstone"
+author: "Artem"
+date: "4/28/2021"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+# Introduction
+
+This case study was made as a final project for the Google Data Analytics Certificate.
+
+I will analyse [FitBit Fitness Tracker Data](https://www.kaggle.com/arashnic/fitbit) to make useful insights for Bellabeat. 
+
+### Stages of analysis:
+
+  1. Business task and key stakeholders
+
+  2. Data Source
+  
+  3. Data preparation and processing
+  
+  4. Analysis
+  
+  5. Conclusion
+
+
+# 1. Business objective and key stakeholders
+
+* **Purpose**
+
+    Provide insight on trends in smart device usage, which can influence Bellabeat marketing strategy
+
+* **Business task**
+
+  1. Identify trends in smart device usage
+
+  2. Find trends which can be applied to Bellabeat customers
+
+  3. Propose ideas, which can help influence Bellabeat marketing strategy
+
+* **Key stakeholders**
+
+  1. Urška Sršen: Bellabeat’s cofounder and Chief Creative Officer
+
+  2. Sando Mur: Mathematician and Bellabeat’s cofounder
+
+  3. Bellabeat marketing analytics team
+  
+* **Bellabeat target audience**
+  
+  Women who are concerned about their own health and habits. 
+
+
+### Identify trends in smart device usage
+
+Due to the space constraint I will only try to answer on the questions below, which I consider to be of the most use for Beallabeat.
+
+**A. Questions regarding daily activity**
+
+  * What is the distribution of people's daily activity?
+  
+  * Do people become more active as they use gadget more?
+  
+  * Do people start wearing Fitbit more often as time goes by?
+
+**B. Questions regarding sleep**
+  
+  * Do people use the device at night?
+  
+  * Do people sleep with their gadgets on daily basis?
+  
+  * What time of a day do people stay active the most?
+
+
+# 2. Data Source
+
+The data for this analysis was taken from a public dataset made available through [Mobius](https://www.kaggle.com/arashnic). It contains personal fitness tracker from thirty fitbit users.
+
+Data is stored in 18 CSV files in long format.
+
+The data is close to 5 years old.
+
+
+#### Data sets used in the research (key variables)
+
+
+1. **Daly activity** 
+
+  * Steps walked per day
+  
+  * Active minutes organized by Sedentary, Light, Moderate, High activity
+  
+  * Calories used 
+  
+2. **Sleep measurements** 
+  
+  * Number of sleep records
+  
+  * Minutes asleep 
+  
+  * Minutes in bed
+  
+3. **Heart rate**
+
+  * Log of heart rate per 5 second
+
+
+### Assessing data quality (Low -> Medium -> High)
+
+  1. Reliability *(Low)* 
+    
+    * Small sample size
+  
+  
+  2. Originality *(Low)*
+  
+    * Collected by the third party - Amazon Mechanical Turk
+  
+  
+  3. Comprehensive *(Low)*
+  
+    * May not have the same target customers as Bellabeat 
+    
+    * Does not included key parameters crucial for analysis (eg. age, gender) 
+  
+  
+  4. Currency *(Medium)*
+  
+    * Collected in 2016 -> has started to loose its up to date status
+  
+  
+  5. Cited *(Low)*
+  
+  * The data has been downloaded and sited. However, the data set is mostly being used by junior data analysts, thus, it potentially lowers its credibility. 
+  
+  
+### Final assessment:
+
+  The data is not recommended for the analysis usage due to its low reliability and low comprehensiveness levels.
+  
+  At the same time, I would not worry about the data being too old, because people's habits and daily activity patterns do not change dramatically over short periods of time.
+
+
+# 3. Prepare and Process data
+
+### Steps:
+
+1. Observe the data
+
+2. Adjust data types 
+
+3. Remove duplicate values 
+
+4. Remove empty rows
+
+
+### Loading libraries for processing and analyzing data
+```{r}
+# Importing libraries
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+
+### Importing data
+```{r}
+daily_activity <- read.csv("../input/fitbit/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+
+sleep_day <- read.csv("../input/fitbit/Fitabase Data 4.12.16-5.12.16/sleepDay_merged.csv")
+
+minuteMETsNarrow_merged <- read.csv("../input/fitbit/Fitabase Data 4.12.16-5.12.16/minuteMETsNarrow_merged.csv")
+
+heartrate_seconds_merged <- read_csv("../input/fitbit/Fitabase Data 4.12.16-5.12.16/heartrate_seconds_merged.csv")
+
+```
+
+### Getting familiar with data
+
+```{r}
+head(daily_activity)
+glimpse(daily_activity)
+
+head(sleep_day)
+glimpse(sleep_day)
+
+head(minuteMETsNarrow_merged)
+glimpse(minuteMETsNarrow_merged)
+
+head(heartrate_seconds_merged)
+glimpse(heartrate_seconds_merged)
+```
+
+### Cleaning data
+```{r}
+# 1. Converting data types
+
+sleep_day <- sleep_day %>% 
+  mutate(sleep_date = as_date(mdy_hms(SleepDay))) %>% 
+  mutate(total_sleep_records = as.integer(TotalSleepRecords)) %>% 
+  mutate(total_minutes_asleep = as.integer(TotalMinutesAsleep)) %>% 
+  mutate(total_time_in_bed = as.integer(TotalTimeInBed))
+
+daily_activity <- daily_activity %>% 
+  mutate(activity_date = as_date(mdy(ActivityDate)))%>% 
+  mutate(total_steps = as.integer(TotalSteps)) %>% 
+  mutate(very_active_minutes = as.integer(VeryActiveMinutes)) %>% 
+  mutate(fairly_active_minutes = as.integer(FairlyActiveMinutes)) %>% 
+  mutate(lightly_active_minutes = as.integer(LightlyActiveMinutes)) %>% 
+  mutate(sedentary_minutes = as.integer(SedentaryMinutes)) %>% 
+  mutate(calories = as.integer(Calories)) 
+
+heartrate_seconds <- heartrate_seconds_merged %>% 
+  mutate(time = as_datetime(mdy_hms(Time))) %>% 
+  mutate(value = as.integer(Value)) 
+
+minuteMETsNarrow_merged <- minuteMETsNarrow_merged %>%  
+  mutate(time = as_datetime(mdy_hms(ActivityMinute)))
+
+
+# 2. Removing duplicates 
+
+# Id and activity date should be unique (0 observations removed)
+daily_activity <- daily_activity %>% 
+  distinct(Id, activity_date, .keep_all = TRUE)
+
+# Id and activity date should be unique (3 observations removed)
+sleep_day <- sleep_day %>% 
+  distinct(Id, sleep_date, .keep_all = TRUE)
+
+# Id and time should be unique (0 observations removed)
+heartrate_seconds <- heartrate_seconds %>% 
+  distinct(Id, time, .keep_all = TRUE)
+
+
+# 3. Checking for NA values and removing if any exist
+
+# No NA values found
+which(!complete.cases(daily_activity))
+which(!complete.cases(sleep_day))
+which(!complete.cases(heartrate_seconds))
+
+```
+
+For my reaserch I decided to use the merged 4 files, which include all information needed for the research.
+
+# 4. Analyze
+
+
+## A. Daily activity trends
+
+
+
+
+###  *  What is the distribution of people's daily activity? 
+  
+In this section I will estimate how active the users of Fitbit devices are. To do so I will group people into "Active" and "Non-Active" users. Active users are those with average sum of high and medium daily activity *over 50 minutes*.
+
+```{r}
+# Removing rows with 700 and less steps (will assume that on these days a device was not used)
+daily_activity_trimed <- daily_activity[daily_activity$total_steps > 700, ] 
+
+# Grouping values by id and finding mean values for each type of activity
+daily_activity_users <- daily_activity_trimed %>% 
+  group_by(Id) %>% 
+  summarise(very_active_minutes_avg = mean(very_active_minutes), 
+            fairly_active_minutes_avg = mean(fairly_active_minutes),
+            lightly_active_minutes_avg = mean(lightly_active_minutes),
+            sedentary_minutes_avg = mean(sedentary_minutes),
+            calories_avg = mean(calories))
+
+# Calculating sum of high and medium activities
+daily_activity_users <- daily_activity_users %>% 
+  mutate(very_fairly_active_avg = very_active_minutes_avg + fairly_active_minutes_avg)
+
+# Creating a binary variable for active and non-active users
+daily_activity_users <- daily_activity_users %>% 
+  mutate(active = ifelse(very_fairly_active_avg > 60, "active", "non-active"))
+
+# Plotting a bar chart to see the distribution
+ggplot(data = daily_activity_users)+
+  geom_bar(mapping = aes(x = active,  fill = active))+ 
+  labs(title = "Distribution of active and non-active users", x = "Activity level", y = "Number of users")+
+  theme(title = element_text(size=20, face="bold"),
+        axis.title=element_text(size=18,face="bold"),
+        legend.text=element_text(size=16))+ 
+  guides(fill=guide_legend(title="Activity level"))
+
+```
+
+Less than 25% of respondents are users, who exercise at least 50 minutes a day. Non-active group has a majority people in it, therefore, we can assume that either an average user does not have an active lifestyle. Or does not wear a device during training.
+
+### * Do people become more active as they use gadget more?
+
+Next I would like to check whether person's activity level increases the more he/she possess a gadget. 
+
+```{r}
+# Plotting a linear regression
+ggplot(data = daily_activity_trimed, aes(x = activity_date, y = total_steps))+
+  geom_smooth(method = "lm")+
+  labs(title = "Number of steps a day", x = "Date", y = "Number of steps")+
+  theme(title = element_text(size=20, face="bold"),
+        axis.title=element_text(size=18,face="bold"))
+
+# Regression summary statistics
+a <- lm(daily_activity_trimed$total_steps~daily_activity_trimed$activity_date)
+summary(a)
+
+```
+
+As we can see that the more a respondent wears Fitbit, the less steps he/she goes per day. However, the correlation is affected by  the data small sample size. Moreover, the p-value for the regression is high (0.409), so the results are not statistically significant. 
+
+#### * Do people start wearing Fitbit more often as time goes by?
+
+I hypothesize that some users will use a device less or completely abandon it after some time. That may happen due to the fact that people might not like the gadget, forget to wear it as the "new effect" diminishes or even switch to another brand.
+
+```{r}
+# Selecting days, when respondents wore their devices
+daily_activity_usage <- daily_activity_trimed %>% 
+  select(Id, activity_date)
+
+# New variable - 1 means the devise was worn 
+daily_activity_usage <- daily_activity_usage %>% 
+  mutate(device_on = 1)
+
+# Populating data to get missing dates for each id, in range from  2016-04-12 to 2016-05-12 
+daily_activity_usage_expanded <- expand(daily_activity_usage, nesting(Id), activity_date)
+
+# Joining two data sets based on left join
+daily_activity_usage_merged <- left_join(daily_activity_usage_expanded, daily_activity_usage, by = c("Id", "activity_date"))
+
+# Replacing NA values with 0 (did not wear a device)
+daily_activity_usage_merged <- daily_activity_usage_merged %>% 
+  mutate(device_on = replace_na(device_on, 0))
+
+# Constructing logistic regression 
+ggplot(data = daily_activity_usage_merged, aes(x = activity_date, y =device_on))+
+  geom_point(alpha = .5)+
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial)) + 
+  labs(title = "Relationship between date and if device was on" , x = "Date", y = "Device on")+
+  theme(title = element_text(size=16, face="bold"),
+        axis.title=element_text(size=18,face="bold"))
+
+# Summary statistics
+logistic <- glm(device_on~activity_date, daily_activity_usage_merged, family = binomial)
+summary(logistic)
+```
+
+From the graph above we can see that there is a negative trend in number of people using Fitbit in time. I chose to use simple logistic regression, as the dependent variable is binary, the independent one is continuous. The results of logistic regression are statistically significant based on p-value of less than 0.001. However, the effect size is quite small. So there is only a slight decrease in the number of people using devices in time. (Model lacks control variables, due to data size limitation)
+
+
+## B. Sleeping trends
+
+### * Do people use the device at night?
+
+It is important to know your target audience and whether people keep using their devices at night or not.
+
+```{r}
+# Creating a data frame with number of people, who wore Fitbit device at least once during the day/night
+day_night <- data.frame(time = c('day', 'night'), 
+  sum_id = c(n_distinct(daily_activity$Id), n_distinct(sleep_day$Id)),
+  ratio = c(n_distinct(daily_activity$Id)/n_distinct(daily_activity$Id)*100, n_distinct(sleep_day$Id)/n_distinct(daily_activity$Id)*100))
+
+as_tibble(day_night)
+
+```
+
+It is clear that almost 73% of people from the sample tried to wear a Fitbit device at least once at day and night throughout usage period. To know more if it is a daily habit or not, we shall have a look at how often users used a device during the day and night. 
+
+```{r}
+# Looking at how many users use their devices at day time (if they made less than 700 steps a day, we can assume that they have not worn the device on that day)
+days_with_device <- daily_activity %>% 
+  group_by(Id) %>% 
+  drop_na() %>% 
+  summarise(with_device_day = sum(total_steps > 700))
+
+# Looking at how many users use their devices at night time
+nigts_wiht_device <- sleep_day %>% 
+  group_by(Id) %>% 
+  summarise(with_device_night = sum(total_sleep_records))
+
+# Merge data sets to have users using their devices both at day and night
+day_night_merged <- merge(days_with_device, nigts_wiht_device, by = c("Id"))
+
+summary(day_night_merged)
+
+```
+
+Analyzing the summary statistics it is clear that the mean usage of a gadget during day time was around 26 days, at the same time for night time the mean was 19 days. 
+
+There are people who use their Firbit only during the day and only tried to sleep with it at night several times (25% of users wore it at night less than 5 days). However, most of the surveyees used the device more extensively.
+
+```{r}
+# Finding ratio of night usage from the day usage 
+day_night_ratio <- day_night_merged %>% 
+  mutate(day_night_r = as.integer(with_device_night/with_device_day*100))
+
+# Building a histogram to show percentage of Fitbit device usage at night compared to the day usage
+day_night_ratio %>% ggplot(aes(x = day_night_r))+
+  geom_histogram(bins = 13, color="darkblue", fill="lightblue")+
+  labs(title="Percentage of device night usage from day usage",
+       x="Percentage of night time useage", y = "Number of id")+
+  scale_x_continuous(breaks = seq(0, 140, 20))+
+  scale_y_continuous(breaks = seq(0, 10, 2))+
+  theme(title = element_text(size=16, face="bold"),
+        axis.title=element_text(size=18,face="bold"))
+```
+
+From the histogram above we can see that 15 out of 24 users tracked their sleep 75% of the time from their daily usage. 
+
+20% of the respondents had a device on more during the night, than during the day (between 6 and 26% more). 
+
+```{r}
+# Selecting variables for future comparison
+sd <- sleep_day %>% 
+  select(Id, sleep_date, total_sleep_records)
+
+# Expanding variable by adding missing date for each id, in range from  2016-04-12 to 2016-05-12 
+sd_expanded <- expand(sd, nesting(Id), sleep_date)
+
+# Joining two data sets based on left join
+sd_expanded_merged <- left_join(sd_expanded, sd, by = c("Id", "sleep_date"))
+
+# Populating missing values (NA values are changed to 0)
+sd_expanded_merged <- sd_expanded_merged %>% 
+  mutate(total_sleep_records = replace_na(total_sleep_records, 0))
+
+# We will run a regression 
+reg_sd <- lm(sd_expanded_merged$total_sleep_records ~ sd_expanded_merged$sleep_date)
+
+summary(reg_sd)
+
+# Plotting a smoothed conditional means plot
+ggplot(data = sd_expanded_merged, mapping = aes(x = sleep_date, 
+  y = total_sleep_records))+
+  geom_smooth(method = "loess")+ 
+  labs(title = "Number of sleep records in time", x = "Sleep date", y = "Sleep records")+
+  theme(title = element_text(size=20, face="bold"),
+        axis.title=element_text(size=18,face="bold"))
+
+```
+
+To understand how number of records correlate with time, I plotted smoothed conditional means. There is a trend that people wear 50% on average more in mid April than in May. 
+
+According to Fitbit the sleep information is collected automatically, thus, it excludes a possibility of having multiple sleeping records on the same day due to a device testing reason or a human error. 
+
+As we do not know whether all the respondents were new to device they were wearing or had had certain experience of usage. Therefore it is harder to make assumptions. 
+
+
+
+**Explanation to the trend** (from the most likely one to the least):
+
+1. If users just bought a device, they probably were experimenting with wearing it to bed. However, due to some reasons, eg. it was uncomfortable or did not match their personal habits (a person forgets take on their device), they started wearing it less. 
+
+2. People may generally sleep with a device on less in May, than in April (eg. we do not know the country of respondents, but in certain places it becomes hotter in May, so having a device on you turnes out to be uncomfortable).
+
+3. There might be some battery issues, and people need to charge a gadget at night.
+
+
+### * What time of a day do people stay active the most?
+
+Now let us check the daily activity throughout the day. To check if there is preferred time for exercising.
+
+In order not to skew the result I will remove from the sample those IDs, who used their Fitbit at night less than 30% from the daily usage. 
+
+```{r}
+# Selecting data
+heartrate_seconds_selection <- heartrate_seconds %>% 
+  select(Id, time, value)
+
+# Removing ID with day-night usage ratio less than 30%
+day_night_ratio_high <- subset(day_night_ratio, day_night_r > 30)
+
+# Creating a dummy variable column to see which people use devices often during nights 
+heartrate_seconds_selection <- heartrate_seconds_selection %>% 
+  mutate(Id1 = Id %in% day_night_ratio$Id)
+
+heartrate_seconds_selection <- subset(heartrate_seconds_selection, Id1 > 0)
+
+# Grouping by time and searching for mean values
+heartrate_seconds_selection <- heartrate_seconds_selection %>% 
+  group_by(time = floor_date(time, "hour")) %>%
+  summarize(value = mean(value))
+
+heartrate_seconds_selection_hms <- heartrate_seconds_selection %>% 
+  mutate(time_hms = substr(time, 12, 16))
+
+heartrate_seconds_selection_hms <- heartrate_seconds_selection_hms %>% 
+  group_by(time_hms) %>% 
+  summarise(value = mean(value))
+
+# Plotting people's heart rate by hour
+ggplot(data = heartrate_seconds_selection_hms, aes(x = time_hms, y = value))+ 
+  geom_bar(stat="identity", fill="navy blue")+
+  theme(axis.text.x = element_text(angle = 45))+
+  labs(title = "People heartrate during the day", x = "Time", y = "Heartrate")+
+  theme(title = element_text(size=20, face="bold"),
+        axis.title=element_text(size=18,face="bold"))
+
+```
+
+Based on a bar chart people do not have specific time window for exercising. 
+
+# 5. Conclusion
+
+In this analysis I identified some trends in Fitbit device usage, which can be applied to Beallabeat.
+
+### Trends
+
+1. There are more people with non-active lifestyle. Only around 25% of the respondents' lifestyle can be called active.
+
+2. There is little to no evidence that device makes a person to be more active. 
+
+3. People start to wear Fitbit less the longer they have a device.
+
+4. People do sleep with Fitbit:
+
+    * Around 73% of people have tried to sleep with their gadget on at least once
+    
+    * 50% of the people used the device extensively (75% of daily time usage)
+
+    * 20% of respondents had devices at night on more than during day time
+    
+5. Less people track sleep as they become more experienced users.
+
+6. There is no preferred time for people to exercise during the day.
+
+
+
+### Ideas for Bellabeat
+
+1. As people having less active lifestyle is a larger group, Bellabeat may focus on more casual device properties: **aesthetics, battery life**.
+
+2. Work on **usage simplicity** and device **appearance**. People may wear Fitbit less, because they realize that they do not need sports or other advanced function. Thus, they might switch back to regular watches, which are more aesthetically appealing.
+
+3. Pay more attention to gadget's **comfort in bed**. As there are many people, who have tried to use a device at night, but gave up on it later.
+
+4. Add more **sleep tracking features**. The proportion of night active users is relatively large. 
+
+5. Create **personalized activity notification** as there is no single time, when people prefer to be active.
+
+
+
+
+
+
+#### Sources
+
+1. Atkinson, G., & Davenne, D. (2007). Relationships between sleep, physical activity and human health. *Physiology & Behavior*, 90(2-3), 229-235.
+
+2. Nes, B. M., Janszky, I., Wisløff, U., Støylen, A., & Karlsen, T. (2012). Age-predicted maximal heart rate in healthy subjects: The HUNT Fitness Study. *Scandinavian Journal of Medicine & Science in Sports*, 23(6), 697–704.
