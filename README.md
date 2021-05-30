@@ -4,3 +4,4 @@ This repository holds a Bellabeat Case Study, where I analyse [FitBit Fitness Tr
 
 ### [Bellabeat Case Study](https://www.kaggle.com/artemkovalenko/bellabeat-case-study-r) on Kaggle
 Note: for your convenience please read the case study on Kaggle, as GitHub does not display R markdown files well
+
